@@ -1,32 +1,79 @@
 package com.accenture.externalapis.demo.client;
 
 import com.accenture.externalapis.demo.config.ExternalServiceProperties;
+import com.accenture.externalapis.demo.dto.BookApiResponse;
+import com.accenture.externalapis.demo.dto.BookDto;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.client.*;
 
-// TODO: Make this class implement BookRestClient.
+import java.util.Arrays;
+import java.util.List;
+
+
 @Component
-public class BookRestClientImpl {
+public class BookRestClientImpl implements BookRestClient {
 
-    private RestClient restClient;
+    private final RestClient restClient;
 
-    public BookRestClientImpl(RestClient.Builder builder, ExternalServiceProperties properties) {
-        // TODO: Build the RestClient using builder.baseUrl(properties.baseUrl()).build()
-        // and assign it to this.restClient
-        //
-        // Optional/bonus: this service doesn't require auth, but in a real API you would
-        // often also add builder.defaultHeader("Authorization", "Bearer " + token) here.
+    public BookRestClientImpl(RestClient.Builder builder,
+                              ExternalServiceProperties properties) {
+        this.restClient = builder
+                .baseUrl(properties.baseUrl())
+                .build();
     }
 
-    // TODO: Implement getBook(Long id) - fetch one book from GET /books/{id} as a
-    // BookApiResponse, then map it onto a BookDto (only keep the fields BookDto needs).
-    //
-    // TODO: Handle the main RestClient error cases and rethrow them as ClientException:
-    //  - HttpClientErrorException (4xx, e.g. book not found)
-    //  - HttpServerErrorException (5xx, e.g. the faulty/teapot book)
-    //  - ResourceAccessException (connection refused / timeout - the external service is unreachable)
 
-    // TODO: Implement getAllBooks() - fetch all books from GET /books as
-    // BookApiResponse[], then map each one onto a BookDto. Handle the same error
-    // cases as getBook() above.
+    @Override
+    public BookDto getBook(Long id) {
+
+        try {
+            BookApiResponse response = restClient.get()
+                    .uri("/books/{id}", id)
+                    .retrieve()
+                    .body(BookApiResponse.class);
+
+            if (response == null) {
+                throw new ClientException("External API returned an empty response.");
+            }
+
+            return BookDto.from(response);
+
+        } catch (HttpClientErrorException e) {
+            throw new ClientException("Client error: " + e.getStatusCode(), e);
+        } catch (HttpServerErrorException e) {
+            throw new ClientException("Server error: " + e.getStatusCode(), e);
+        } catch (ResourceAccessException e) {
+            throw new ClientException("Connection error: " + e.getMessage(), e);
+        }
+
+    }
+
+
+
+    @Override
+    public List<BookDto> getAllBooks() {
+        try {
+            BookApiResponse[] response = restClient.get()
+                    .uri("/books")
+                    .retrieve()
+                    .body(BookApiResponse[].class);
+
+
+            if (response == null) {
+                throw new ClientException("External API returned an empty response.");
+            }
+
+            return Arrays.stream(response)
+                    .map(BookDto::from)
+                    .toList();
+
+        } catch (HttpClientErrorException e) {
+            throw new ClientException("Client error: " + e.getStatusCode(), e);
+        } catch (HttpServerErrorException e) {
+            throw new ClientException("Server error: " + e.getStatusCode(), e);
+        } catch (ResourceAccessException e) {
+            throw new ClientException("Connection error: " + e.getMessage(), e);
+        }
+    }
+
 }

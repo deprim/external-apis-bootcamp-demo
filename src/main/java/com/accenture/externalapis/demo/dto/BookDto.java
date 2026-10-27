@@ -1,11 +1,19 @@
 package com.accenture.externalapis.demo.dto;
 
-// This is the domain DTO used by this application.
-// Compare it to BookApiResponse (the raw fields returned by the external
-// service, which you define yourself using Swagger UI) - notice this DTO
-// does not keep every field. Decide what you truly need.
+import java.math.BigDecimal;
+
 public record BookDto(String title,
-                       String author,
-                       String genre,
-                       double price) {
+                      String author,
+                      String genre,
+                      BigDecimal price,
+                      Integer publishedYear) {
+
+    public static BookDto from(BookApiResponse response) {
+        return new BookDto(response.title(),
+                response.author(),
+                response.genre(),
+                response.price(),
+                response.publishedYear());
+    }
+
 }
